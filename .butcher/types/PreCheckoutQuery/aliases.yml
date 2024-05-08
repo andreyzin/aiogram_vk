@@ -1,4 +1,0 @@
-answer:
-  method: answerPreCheckoutQuery
-  fill:
-    pre_checkout_query_id: self.id

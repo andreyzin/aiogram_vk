@@ -3,19 +3,19 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aiogram"
-description = 'Modern and fully asynchronous framework for Telegram Bot API'
-readme = "README.rst"
+name = "aiogram_vk"
+description = 'Modern and fully asynchronous framework for Vk built on top of aiogram'
+readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
 authors = [
-    { name = "Alex Root Junior", email = "jroot.junior@gmail.com" },
+    { name = "Andrey ZIN", email = "andrey@zin.pw" },
 ]
 maintainers = [
-    { name = "Alex Root Junior", email = "jroot.junior@gmail.com" },
+    { name = "Andrey ZIN", email = "andrey@zin.pw" },
 ]
 keywords = [
-    "telegram",
+    "vk",
     "bot",
     "api",
     "framework",
@@ -51,7 +51,7 @@ dependencies = [
 dynamic = ["version"]
 
 [tool.hatch.version]
-path = "aiogram/__meta__.py"
+path = "aiogram_vk/__meta__.py"
 
 [project.optional-dependencies]
 fast = [
@@ -108,9 +108,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://aiogram.dev/"
-Documentation = "https://docs.aiogram.dev/"
-Repository = "https://github.com/aiogram/aiogram/"
+Homepage = "https://github.com/andreyzin/aiogram_vk"
+Documentation = "https://github.com/andreyzin/aiogram_vk"
+Repository = "https://github.com/andreyzin/aiogram_vk"
 
 [tool.hatch.envs.default]
 features = [
@@ -125,24 +125,6 @@ post-install-commands = [
     "pre-commit install",
 ]
 
-[tool.hatch.envs.default.scripts]
-reformat = [
-    "black aiogram tests",
-    "isort aiogram tests",
-]
-lint = "ruff aiogram"
-
-[tool.hatch.envs.docs]
-features = [
-    "fast",
-    "redis",
-    "proxy",
-    "i18n",
-    "docs",
-    "cli",
-]
-[tool.hatch.envs.docs.scripts]
-serve = "sphinx-autobuild --watch aiogram/ --watch CHANGELOG.rst --watch README.rst docs/ docs/_build/ {args}"
 
 [tool.hatch.envs.dev]
 python = "3.12"
@@ -156,108 +138,8 @@ features = [
     "cli",
 ]
 
-[tool.hatch.envs.dev.scripts]
-update = [
-    "butcher parse",
-    "butcher refresh",
-    "butcher apply all",
-]
-
-[tool.hatch.envs.test]
-features = [
-    "fast",
-    "redis",
-    "proxy",
-    "i18n",
-    "test",
-    "cli",
-]
-
-[tool.hatch.envs.test.scripts]
-cov = [
-    "pytest --cov-config pyproject.toml --cov=aiogram --html=reports/py{matrix:python}/tests/index.html {args}",
-    "coverage html -d reports/py{matrix:python}/coverage",
-]
-cov-redis = [
-    "pytest --cov-config pyproject.toml --cov=aiogram --html=reports/py{matrix:python}/tests/index.html --redis {env:REDIS_DNS:'redis://localhost:6379'} {args}",
-    "coverage html -d reports/py{matrix:python}/coverage",
-]
-view-cov = "google-chrome-stable reports/py{matrix:python}/coverage/index.html"
-
-
 [[tool.hatch.envs.test.matrix]]
 python = ["38", "39", "310", "311", "312"]
-
-[tool.ruff]
-line-length = 99
-select = [
-    # "C", # TODO: mccabe - code complecity
-    "C4",
-    "E",
-    "F",
-    "T10",
-    "T20",
-    "Q",
-    "RET",
-]
-ignore = [
-    "F401"
-]
-src = ["aiogram", "tests"]
-exclude = [
-    ".git",
-    "build",
-    "dist",
-    "venv",
-    ".venv",
-    "docs",
-    "tests",
-    "dev",
-    "scripts",
-    "*.egg-info",
-]
-target-version = "py310"
-
-[tool.ruff.isort]
-known-first-party = [
-    "aiogram",
-    "finite_state_machine",
-    "handlers",
-    "routes",
-]
-
-[tool.ruff.per-file-ignores]
-"aiogram/client/bot.py" = ["E501"]
-"aiogram/types/*" = ["E501"]
-"aiogram/methods/*" = ["E501"]
-"aiogram/enums/*" = ["E501"]
-
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = [
-    "tests",
-]
-filterwarnings = [
-    "error",
-    "ignore::pytest.PytestUnraisableExceptionWarning",
-]
-
-[tool.coverage.run]
-branch = false
-parallel = true
-omit = [
-    "aiogram/__about__.py",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "if __name__ == .__main__.:",
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "@abstractmethod",
-    "@overload",
-]
 
 [tool.mypy]
 plugins = "pydantic.mypy"
@@ -310,38 +192,3 @@ exclude = '''
 
 [tool.isort]
 profile = "black"
-
-[tool.towncrier]
-package = "aiogram"
-filename = "CHANGES.rst"
-directory = "CHANGES/"
-template = "CHANGES/.template.rst.jinja2"
-issue_format = "`#{issue} <https://github.com/aiogram/aiogram/issues/{issue}>`_"
-
-[[tool.towncrier.section]]
-path = ""
-
-[[tool.towncrier.type]]
-directory = "feature"
-name = "Features"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "bugfix"
-name = "Bugfixes"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "doc"
-name = "Improved Documentation"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "removal"
-name = "Deprecations and Removals"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "misc"
-name = "Misc"
-showcontent = true

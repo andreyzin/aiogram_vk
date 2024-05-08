@@ -1,5 +1,0 @@
-annotations:
-  emoji_status_expiration_date:
-    parsed_type:
-      type: std
-      name: DateTime

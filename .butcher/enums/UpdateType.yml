@@ -1,9 +1,0 @@
-name: UpdateType
-description: |
-  This object represents the complete list of allowed update types
-
-  Source: https://core.telegram.org/bots/api#update
-extract:
-  entity: Update
-  exclude:
-    - update_id

@@ -1,4 +1,0 @@
-answer:
-  method: answerShippingQuery
-  fill:
-    shipping_query_id: self.id

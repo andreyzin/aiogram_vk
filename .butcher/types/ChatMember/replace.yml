@@ -1,5 +1,0 @@
-annotations:
-  until_date:
-    parsed_type:
-      type: std
-      name: DateTime
