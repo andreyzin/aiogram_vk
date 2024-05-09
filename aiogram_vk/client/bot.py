@@ -21,6 +21,7 @@ import aiofiles
 
 from aiogram_vk.__meta__ import __api_version__
 from aiogram_vk.methods import account
+from aiogram_vk.types import AccountUserSettings
 from aiogram_vk.utils.token import extract_bot_id, validate_token
 
 from ..methods import VkMethod
@@ -61,7 +62,7 @@ class VkBot:
 
         self.__token = access_token
         self._api_version = api_version
-        self._me: Optional[AccountInfo] = None
+        self._me: Optional[AccountUserSettings] = None
 
     async def __aenter__(self) -> "VkBot":
         return self
@@ -105,14 +106,14 @@ class VkBot:
             if auto_close:
                 await self.session.close()
 
-    async def me(self) -> AccountInfo:
+    async def me(self) -> AccountUserSettings:
         """
         Cached alias for getMe method
 
         :return:
         """
         if self._me is None:  # pragma: no cover
-            self._me = await self(account.GetInfo())
+            self._me = await self(account.GetProfileInfo())
         return self._me
 
     @classmethod
