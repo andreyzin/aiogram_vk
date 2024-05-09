@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional
 
-from aiogram_vk.types.base import VkObject
+from aiogram_vk.types import VkObject
 
 from ..base import VkMethod
 

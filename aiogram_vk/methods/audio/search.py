@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Optional
 
-from aiogram_vk.types.audio_search_result import AudioSearchResult
+from aiogram_vk.types import AudioSearchResult
 
 from ..base import VkMethod
 

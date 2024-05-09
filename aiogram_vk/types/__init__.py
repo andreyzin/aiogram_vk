@@ -1,20 +1,28 @@
 from typing import List, Literal, Optional, Union
 
-from .account_info import AccountInfo
-from .audio_search_result import AudioSearchResult
+from .account.info import AccountInfo
+from .account.user_settings import AccountUserSettings
+from .audio.audio import Audio
+from .audio.search_result import AudioSearchResult
 from .base import UNSET_PARSE_MODE, VkObject
 from .custom import DateTime
 from .error import Error
 from .input_file import InputFile
+from .users.user_min import UserMin
+from .users.user_settings_xtr import UserSettingsXtr
 
 __all__ = (
-    "Error",
-    "DateTime",
+    "AccountInfo",
+    "AccountUserSettings",
+    "Audio",
+    "AudioSearchResult",
     "VkObject",
     "UNSET_PARSE_MODE",
+    "Error",
+    "DateTime",
     "InputFile",
-    "AccountInfo",
-    "AudioSearchResult",
+    "UserMin",
+    "UserSettingsXtr",
 )
 
 # Load typing forward refs for every VkObject

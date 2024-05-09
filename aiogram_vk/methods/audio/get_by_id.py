@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, List
 
 from pydantic import field_serializer
 
-from aiogram_vk.types.audio import Audio
+from aiogram_vk.types import Audio
 
 from ..base import VkMethod
 
