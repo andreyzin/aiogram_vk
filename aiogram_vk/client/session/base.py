@@ -21,7 +21,13 @@ from typing import (
 
 from pydantic import ValidationError
 
-from aiogram_vk.exceptions import ClientDecodeError, VkAPIError, VkRetryAfter
+from aiogram_vk.exceptions import (
+    CaptchaInfo,
+    ClientDecodeError,
+    VkAPICaptchaError,
+    VkAPIError,
+)
+from aiogram_vk.types.error import CaptchaError
 
 from ...methods import Response, VkMethod
 from ...methods.base import VkType
@@ -91,7 +97,18 @@ class BaseSession(abc.ABC):
             return response
 
         error_msg = cast(str, response.error.error_msg) if response.error else ""
-
+        if error_msg == "Captcha needed" and hasattr(response.error, "captcha_img"):
+            response.error = cast(CaptchaError, response.error)
+            raise VkAPICaptchaError(
+                method=method,
+                message=error_msg,
+                captcha_info=CaptchaInfo(
+                    url=response.error.captcha_img,
+                    sid=response.error.captcha_sid,
+                    track=response.error.captcha_track,
+                ),
+            )
+        
         raise VkAPIError(
             method=method,
             message=error_msg,

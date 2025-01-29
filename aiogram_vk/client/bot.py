@@ -10,6 +10,7 @@ from typing import (
     AsyncGenerator,
     AsyncIterator,
     BinaryIO,
+    Callable,
     List,
     Optional,
     Type,
@@ -20,8 +21,10 @@ from typing import (
 import aiofiles
 
 from aiogram_vk.__meta__ import __api_version__
+from aiogram_vk.exceptions import VkAPICaptchaError, VkAPIError
 from aiogram_vk.methods import account
 from aiogram_vk.types import AccountUserSettings
+from aiogram_vk.types.captcha import CaptchaInfo
 from aiogram_vk.utils.token import extract_bot_id, validate_token
 
 from ..methods import VkMethod
@@ -192,14 +195,32 @@ class VkBot:
             if close_stream:
                 await stream.aclose()
 
-    async def __call__(self, method: VkMethod[T], request_timeout: Optional[int] = None) -> T:
+    async def __call__(
+        self,
+        method: VkMethod[T],
+        request_timeout: Optional[int] = None,
+        captcha_handler: Optional[Callable[[CaptchaInfo], str]] = None,
+        max_captcha_retries: int = 2,
+    ) -> T:
         """
         Call API method
 
         :param method:
         :return:
         """
-        return await self.session(self, method, timeout=request_timeout)
+        for _ in range(max_captcha_retries + 1):
+            try:
+                return await self.session(self, method, timeout=request_timeout)
+            except VkAPICaptchaError as e:
+                if captcha_handler is not None:
+                    method = method.with_captcha(
+                        captcha_sid=e.captcha_info.sid,
+                        captcha_key=captcha_handler(e.captcha_info),
+                    )
+                else:
+                    raise
+
+        raise VkAPIError(method, "Max captcha retries exceeded")
 
     def __hash__(self) -> int:
         """

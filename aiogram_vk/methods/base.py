@@ -9,6 +9,7 @@ from typing import (
     Generator,
     Generic,
     Optional,
+    Self,
     TypeVar,
 )
 
@@ -97,3 +98,8 @@ class VkMethod(BotContextController, BaseModel, Generic[VkType], ABC):
                 "and then call it `await method()`"
             )
         return self.emit(bot).__await__()
+
+    def with_captcha(self, captcha_sid: str, captcha_key: str) -> Self:
+        self.captcha_sid = captcha_sid
+        self.captcha_key = captcha_key
+        return self
