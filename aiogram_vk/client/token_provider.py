@@ -1,10 +1,14 @@
+import ssl
 from enum import Enum
 from typing import Awaitable, Callable, List, Optional, Self, Union
 
 import aiohttp
-from pydantic import BaseModel
+import httpx
+from pydantic import BaseModel, model_validator, validator
 
 from aiogram_vk.client.vk import KATE, VkAPIClient
+from aiogram_vk.types.captcha import Captcha, CaptchaAnswer
+from aiogram_vk.utils.captcha_solvers.base import CaptchaSolver
 
 
 class UserTokenScope(str, Enum):
@@ -72,10 +76,19 @@ class InvalidClient(AuthError):
     pass
 
 
-class Captcha(BaseModel):
-    sid: int
-    img: str
-    key: Optional[str] = None
+# {
+#     "error": "need_captcha",
+#     "captcha_sid": "286692404012",
+#     "is_refresh_enabled": True,
+#     "captcha_img": "https://vk.com/captcha.php?sid=286692404012&source=api-oauth&app_id=2685278&device_id=&resized=1",
+#     "captcha_ts": 1757165871.039,
+#     "captcha_attempt": 1,
+#     "captcha_ratio": 2.6,
+#     "redirect_uri": "https://id.vk.com/not_robot_captcha?domain=vk.com&session_token=eyJhbGciOiJBMjU2R0NNS1ciLCJlbmMiOiJBMjU2R0NNIiwiaXYiOiItbndGNXlCbHdEbzhvNlN0Iiwia2lkIjoiYzQ3YTZkNTMtYWJkZC00MzRjLWE0NWQtNjI4OGQ4MGU4YTZlIiwidGFnIjoiV0xmZFl5bVlTcHNkOE00eDJPV096USIsInppcCI6IkRFRiJ9.hhKQvezBRff0GzN8E95Hi0En8zaSoLwNJmAPtdxgmMA.49sPMmqDAkIu3_y_.zBYOmtDrLC4roYZVylEn_UvnnRqZCx9kevDDu5zgbebmqUOLmJXTSTIzQHpMLeoY-3zOmZIhLeyZOiUawxJA6VVew7PodM84OQcaEHI0cI3h7wRf4bPyO8Y7PIhfV-j6TtsFrRjfH1HFhxI9mOE74pX93Hnmkes1Z5KPWiKv_0V-tIEZLjpJ_4wQ_C0skQQijoWRZudOFpP-uNgMLDWU0C87imvyPBOAVgOhFAsuSuoGaw6dx2RUeRddpGJ42-ZnJkcTEt9ujhwZPWmGDSjCjnrIRszCN0pfqsLauC1BMIcSEaGy4WPRoewa7k-9F-AoEyHLPVqByDErjuKjJ3_Mclo_cHDG76ZrkpOMlPz7c0lQYCk5u_4wD94fzbWNgPVL26ikTm9osVQ518cXaOS2OjAeXstpFfjR2XoH1fJsmO9moIfGN1QsZJ0qzffOr9WW2nntVQtGaWNAU-oSPtpF0MswYe1eIxfUr-6y0a0jpSj6KMARzoDEQFLtWHjHa5upQfJv4RIwpXcaka3IlHqM16evo8pSJimdF7YHrzLf0tDTZKUPeBrw18QK-nxoaarbXbTe4r-hzyE-gYoeQIy6seO0kVKTBEXvKA0V32wpRV1xgVJv70sfHDE4YtLp9QuFP1RZ56Qafl8dI8yy3cGWPBs9pIYcsfp2eOTE1ps7WppIf4Sgigl4qFMEOrMO8EL16sIMbkJNHQ2HogFvesPPSv53Ozvb5aZ59vsuunSLs3_lO1KNYs3IiKJgn_zoFZisOT7CDtsT9jw1rHa6VhCr0KPf1hoZ4Xod3SDvh2kN_JF5JNyDQrQxenIBXOL9poMGNAP5ObO7EuNjXB8Y-wc8cEqy0qEPwen4bcz0EeGRdIC33a-2SeTtUXa9SYzVWXoR4Pv_tIXV4YJuyp7CKYn1wnJRCvzL-QTUyhl9v1qzZWutbMDFxrlqFhsP8OEDSfU2_hO_KLUbiv0vFjTXXfyWmfqogg.KNmVwHbWp0bdyT4VGwFm_A&variant=popup&blank=1",
+#     "is_sound_captcha_available": True,
+#     "captcha_track": "https://vk.com/sound_captcha.php?captcha_sid=286692404012&act=get&source=api-oauth_2fafcc4559798ab7&app_id=2685278&device_id=",
+#     "uiux_changes": True,
+# }
 
 
 class VkTokenProvider:
@@ -87,7 +100,9 @@ class VkTokenProvider:
         scope: List[UserTokenScope] = [UserTokenScope.offline, UserTokenScope.audio],
         vk_api_client: VkAPIClient = KATE,
         session: Optional[aiohttp.ClientSession] = None,
-        captcha_solver: Optional[Callable[[Captcha], Awaitable[str]]] = None,
+        captcha_solver: (
+            Optional[Callable[[Captcha], Awaitable[CaptchaAnswer]]] | CaptchaSolver
+        ) = None,
         two_factor_auth: Optional[Callable[[Self], Awaitable[str]]] = None,
         api_version: str = "5.131",
     ):
@@ -108,7 +123,12 @@ class VkTokenProvider:
         self._password = password
         self._scope = scope
         self._vk_api_client = vk_api_client
-        self._session = session or aiohttp.ClientSession()
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        self._session = session or aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=ssl_ctx)
+        )
         self._captcha_solver = captcha_solver
         self._two_factor_auth = two_factor_auth
         self.api_version = api_version
@@ -144,18 +164,14 @@ class VkTokenProvider:
         """
         auth_response = await self.send_auth()
         while "error" in auth_response:
-            print(auth_response)
             error = auth_response["error"]
             if error == "need_captcha":
                 if self._captcha_solver is None:
                     raise CaptchaError("Captcha solver is not set")
 
-                captcha = Captcha(
-                    sid=auth_response["captcha_sid"],
-                    img=auth_response["captcha_img"],
-                )
-                captcha.key = await self._captcha_solver(captcha)
-                auth_response = await self.send_auth(captcha=captcha)
+                captcha = Captcha.model_validate(auth_response)
+                captcha_answer = await self._captcha_solver(captcha)
+                auth_response = await self.send_auth(captcha_answer=captcha_answer)
 
             elif error == "need_validation":
                 if self._two_factor_auth is None:
@@ -189,7 +205,7 @@ class VkTokenProvider:
     async def send_auth(
         self,
         code: Optional[str] = None,
-        captcha: Optional[Captcha] = None,
+        captcha_answer: Optional[CaptchaAnswer] = None,
     ) -> dict:
         """
         Request auth from VK.
@@ -213,12 +229,14 @@ class VkTokenProvider:
             "v": self.api_version,
         }
 
-        if captcha:
-            if captcha.key is None:
-                raise CaptchaError("Captcha key is not set")
-
-            params["captcha_sid"] = captcha.sid
-            params["captcha_key"] = captcha.key
+        if captcha_answer:
+            # if captcha.key is None:
+            #     raise CaptchaError("Captcha key is not set")
+            params = params | captcha_answer.model_dump(exclude_none=True)
+            # params["captcha_sid"] = captcha_answer.captcha_sid
+            # if captcha_answer.key:
+            #     params["captcha_key"] = captcha_answer.key
+            # params["success_token"] = captcha_answer.success_token
 
         if code:
             params["code"] = code
