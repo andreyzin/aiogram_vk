@@ -89,8 +89,7 @@ def find_best_A(img: Image.Image, swap_array, maxA=50, N=5):
         if sc < best_score:
             best_candidate = candidate
             best_score, best_A = sc, A
-    if best_candidate:
-        best_candidate.show()
+
     answer = swap_array[: best_A * 2]
     return best_A, answer
 
