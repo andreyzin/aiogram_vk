@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from aiogram_vk.methods import VkMethod
 from aiogram_vk.methods.base import VkType
-from aiogram_vk.types.captcha import CaptchaInfo
+from aiogram_vk.types.captcha import Captcha
 
 
 class AiogramError(Exception):
@@ -106,10 +106,10 @@ class VkAPICaptchaError(VkAPIError):
     """
 
     url = "https://core.Vk.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this"
-    captcha_info: CaptchaInfo
+    captcha: Captcha
 
-    def __init__(self, method: VkMethod[VkType], message: str, captcha_info: CaptchaInfo) -> None:
-        self.captcha_info = captcha_info
+    def __init__(self, method: VkMethod[VkType], message: str, captcha: Captcha) -> None:
+        self.captcha = captcha
         super().__init__(method=method, message=message)
 
 

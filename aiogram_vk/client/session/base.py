@@ -22,7 +22,6 @@ from typing import (
 from pydantic import ValidationError
 
 from aiogram_vk.exceptions import (
-    CaptchaInfo,
     ClientDecodeError,
     VkAPICaptchaError,
     VkAPIError,
@@ -102,11 +101,7 @@ class BaseSession(abc.ABC):
             raise VkAPICaptchaError(
                 method=method,
                 message=error_msg,
-                captcha_info=CaptchaInfo(
-                    url=response.error.captcha_img,
-                    sid=response.error.captcha_sid,
-                    track=response.error.captcha_track,
-                ),
+                captcha=response.error,
             )
         
         raise VkAPIError(

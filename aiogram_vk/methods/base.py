@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.functional_validators import model_validator
 
 from aiogram_vk.client.context_controller import BotContextController
+from aiogram_vk.types.captcha import CaptchaAnswer
 
 from ..types import InputFile, Error
 from ..types.base import UNSET_TYPE
@@ -99,7 +100,8 @@ class VkMethod(BotContextController, BaseModel, Generic[VkType], ABC):
             )
         return self.emit(bot).__await__()
 
-    def with_captcha(self, captcha_sid: str, captcha_key: str) -> Self:
-        self.captcha_sid = captcha_sid
-        self.captcha_key = captcha_key
+    def with_captcha(self, captcha_answer: CaptchaAnswer) -> Self:
+        self.captcha_sid = captcha_answer.captcha_sid
+        self.captcha_key = captcha_answer.key
+        self.success_token = captcha_answer.success_token
         return self

@@ -5,11 +5,12 @@ from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from curl_cffi import AsyncSession, Response, post
+from curl_cffi import AsyncSession, Response
 from pydantic import BaseModel
 
-from aiogram_vk.client.token_provider import Captcha, CaptchaAnswer
+from aiogram_vk.types.captcha import Captcha, CaptchaAnswer
 from aiogram_vk.utils.captcha_solvers.base import CaptchaSolver
+
 from .make_hash import perform_pow
 from .solve_image import solve_image
 
@@ -20,6 +21,7 @@ class InitialParams:
     captcha_settings: str
     pow_input: str
     difficulty: int
+    captcha_type: str
 
 
 class CaptchaContent(BaseModel):
@@ -74,14 +76,16 @@ class SliderCaptchaSolver(CaptchaSolver):
         captcha_settings = re.search(r"settings\":\"(.+?)\"", r.text)
         pow_input = re.search(r"powInput = \"(.+?)\"", r.text)
         difficulty = re.search(r"const difficulty = (\d+);", r.text)
-        if not captcha_settings or not pow_input or not difficulty:
+        captcha_type = re.search(r"show_captcha_type\":\"(.+?)\"", r.text)
+        if not captcha_settings or not pow_input or not difficulty or not captcha_type:
             raise Exception("Captcha not found")
 
         captcha_settings = json.loads(f'"{captcha_settings.group(1)}"')
         pow_input = pow_input.group(1)
         difficulty = int(difficulty.group(1))
+        captcha_type = captcha_type.group(1)
 
-        return InitialParams(cookies, captcha_settings, pow_input, difficulty)
+        return InitialParams(cookies, captcha_settings, pow_input, difficulty, captcha_type)
 
     async def _hook_captcha_settings(
         self, session: AsyncSession[Response], session_token: str, initial_params: InitialParams
@@ -141,9 +145,16 @@ class SliderCaptchaSolver(CaptchaSolver):
         initial_params = await self._fetch_init_params(session, captcha)
 
         await self._hook_captcha_settings(session, session_token, initial_params)
-        captcha_content = await self._get_captcha_content(session, session_token, initial_params)
-        await self._hook_component_done(session, session_token, initial_params)
-        A, steps = solve_image(captcha_content.image, captcha_content.steps)
+
+        steps = {}
+        if initial_params.captcha_type == "slider":
+            captcha_content = await self._get_captcha_content(
+                session, session_token, initial_params
+            )
+            await self._hook_component_done(session, session_token, initial_params)
+            A, steps = solve_image(captcha_content.image, captcha_content.steps)
+        # if initial_params.captcha_type == "checkbox":
+
         h = perform_pow(initial_params.pow_input, initial_params.difficulty)
         data = {
             "accelerometer": "[]",
@@ -173,9 +184,9 @@ class SliderCaptchaSolver(CaptchaSolver):
             data=urlencode(data),
             impersonate="chrome131",
         )
-
         if response.json()["response"]["status"] != "OK":
             return await self(captcha)
         return CaptchaAnswer(
-            captcha_sid=captcha.captcha_sid, success_token=response.json()["response"]["success_token"]
+            captcha_sid=captcha.captcha_sid,
+            success_token=response.json()["response"]["success_token"],
         )

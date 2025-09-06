@@ -3,12 +3,10 @@ from enum import Enum
 from typing import Awaitable, Callable, List, Optional, Self, Union
 
 import aiohttp
-import httpx
-from pydantic import BaseModel, model_validator, validator
 
 from aiogram_vk.client.vk import KATE, VkAPIClient
 from aiogram_vk.types.captcha import Captcha, CaptchaAnswer
-from aiogram_vk.utils.captcha_solvers.base import CaptchaSolver
+from aiogram_vk.utils import CaptchaSolverType
 
 
 class UserTokenScope(str, Enum):
@@ -100,9 +98,7 @@ class VkTokenProvider:
         scope: List[UserTokenScope] = [UserTokenScope.offline, UserTokenScope.audio],
         vk_api_client: VkAPIClient = KATE,
         session: Optional[aiohttp.ClientSession] = None,
-        captcha_solver: (
-            Optional[Callable[[Captcha], Awaitable[CaptchaAnswer]]] | CaptchaSolver
-        ) = None,
+        captcha_solver: Optional[CaptchaSolverType] = None,
         two_factor_auth: Optional[Callable[[Self], Awaitable[str]]] = None,
         api_version: str = "5.131",
     ):

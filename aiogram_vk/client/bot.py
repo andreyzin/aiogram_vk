@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 import pathlib
-import warnings
 from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import (
@@ -10,8 +9,6 @@ from typing import (
     AsyncGenerator,
     AsyncIterator,
     BinaryIO,
-    Callable,
-    List,
     Optional,
     Type,
     TypeVar,
@@ -24,11 +21,10 @@ from aiogram_vk.__meta__ import __api_version__
 from aiogram_vk.exceptions import VkAPICaptchaError, VkAPIError
 from aiogram_vk.methods import account
 from aiogram_vk.types import AccountUserSettings
-from aiogram_vk.types.captcha import CaptchaInfo
+from aiogram_vk.utils import CaptchaSolverType
 from aiogram_vk.utils.token import extract_bot_id, validate_token
 
 from ..methods import VkMethod
-from ..types import AccountInfo
 from .default import DefaultBotProperties
 from .session.aiohttp import AiohttpSession
 from .session.base import BaseSession
@@ -43,6 +39,7 @@ class VkBot:
         session: Optional[BaseSession] = None,
         default: Optional[DefaultBotProperties] = None,
         api_version: str = __api_version__,
+        captcha_handler: Optional[CaptchaSolverType] = None,
     ) -> None:
         """
         VkBot class
@@ -63,6 +60,7 @@ class VkBot:
 
         self.default = default
 
+        self._captcha_handler = captcha_handler
         self.__token = access_token
         self._api_version = api_version
         self._me: Optional[AccountUserSettings] = None
@@ -199,7 +197,7 @@ class VkBot:
         self,
         method: VkMethod[T],
         request_timeout: Optional[int] = None,
-        captcha_handler: Optional[Callable[[CaptchaInfo], str]] = None,
+        captcha_handler: Optional[CaptchaSolverType] = None,
         max_captcha_retries: int = 2,
     ) -> T:
         """
@@ -208,14 +206,15 @@ class VkBot:
         :param method:
         :return:
         """
+        captcha_handler = captcha_handler or self._captcha_handler
         for _ in range(max_captcha_retries + 1):
             try:
-                return await self.session(self, method, timeout=request_timeout)
+                async with self.session:
+                    return await self.session(self, method, timeout=request_timeout)
             except VkAPICaptchaError as e:
                 if captcha_handler is not None:
                     method = method.with_captcha(
-                        captcha_sid=e.captcha_info.sid,
-                        captcha_key=captcha_handler(e.captcha_info),
+                        captcha_answer=await captcha_handler(e.captcha),
                     )
                 else:
                     raise
