@@ -140,7 +140,7 @@ class SliderCaptchaSolver(CaptchaSolver):
         )
 
     async def __call__(self, captcha: Captcha) -> CaptchaAnswer:
-        session = AsyncSession[Response](verify=False)
+        session = AsyncSession[Response](verify=False, impersonate="chrome131")
         session_token = parse_qs(captcha.redirect_uri)["session_token"][0]
         initial_params = await self._fetch_init_params(session, captcha)
 
