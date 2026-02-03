@@ -1,8 +1,9 @@
+import asyncio
 import base64
 import json
 import re
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from curl_cffi import AsyncSession, Response
@@ -118,7 +119,8 @@ class SliderCaptchaSolver(CaptchaSolver):
                 "v": "5.131",
             },
         )
-        return CaptchaResponse.model_validate(r.json()).response
+        data = r.json()
+        return CaptchaResponse.model_validate(data).response
 
     async def _hook_component_done(
         self, session: AsyncSession[Response], session_token: str, initial_params: InitialParams
@@ -139,8 +141,12 @@ class SliderCaptchaSolver(CaptchaSolver):
             },
         )
 
-    async def __call__(self, captcha: Captcha) -> CaptchaAnswer:
-        session = AsyncSession[Response](verify=False, impersonate="chrome131")
+    async def __call__(self, captcha: Captcha, remixuas: Optional[str] = None) -> CaptchaAnswer:
+        session = AsyncSession[Response](
+            verify=False,
+            impersonate="chrome131",
+            cookies={"remixuas": remixuas} if remixuas else {},
+        )
         session_token = parse_qs(captcha.redirect_uri)["session_token"][0]
         initial_params = await self._fetch_init_params(session, captcha)
 
@@ -153,7 +159,6 @@ class SliderCaptchaSolver(CaptchaSolver):
             )
             await self._hook_component_done(session, session_token, initial_params)
             A, steps = solve_image(captcha_content.image, captcha_content.steps)
-        # if initial_params.captcha_type == "checkbox":
 
         h = perform_pow(initial_params.pow_input, initial_params.difficulty)
         data = {

@@ -1,95 +1,19 @@
 import ssl
-from enum import Enum
 from typing import Awaitable, Callable, List, Optional, Self, Union
 
 import aiohttp
 
+from aiogram_vk.client.auth.event_pipe import AuthEventPipeProtocol
 from aiogram_vk.client.vk import KATE, VkAPIClient
 from aiogram_vk.types.captcha import Captcha, CaptchaAnswer
-from aiogram_vk.utils import CaptchaSolverType
+from aiogram_vk.utils import CaptchaSolverProtocol
+
+from ..errors import AuthError, CaptchaError, InvalidClient, Need2FAError
+from ..scope import UserTokenScope
+from .base import BaseTokenProvider
 
 
-class UserTokenScope(str, Enum):
-    notify = "notify"
-    "The user allowed to send him notifications (for flash/iframe applications)"
-    friends = "friends"
-    "Access to friends."
-    photos = "photos"
-    "Access to photos."
-    audio = "audio"
-    "Access to audio recordings."
-    video = "video"
-    "Access to video."
-    stories = "stories"
-    "Access to stories"
-    pages = "pages"
-    "Access to wiki pages"
-    menu = "menu"
-    "Add a link to the application in the menu on the left."
-    status = "status"
-    "Access to user status."
-    notes = "notes"
-    "Access to user notes."
-    messages = "messages"
-    "Access to advanced methods of working with messages (only for Standalone applications, past moderation )."
-    wall = "wall"
-    """Access to conventional and advanced methods of working with the wall. This right of access by default is not available for sites (ignored when trying to authorize for applications with the type "Website" or according to the scheme Authorization Code Flow )."""
-    ads = "ads"
-    "Access to advanced methods of working with the advertising API . Available for authorization according to the scheme Implicit Flow or Authorization Code Flow ."
-    offline = "offline"
-    "Access to API at any time (when using this option, the parameter expires_in returned with access_token contains 0 — an infinite token). It is not used in Open API."
-    docs = "docs"
-    "Access to documents."
-    groups = "groups"
-    "Access to user groups."
-    notifications = "notifications"
-    "Access to user response alerts."
-    stats = "stats"
-    "Access to statistics of groups and applications of the user, the administrator of which he is."
-    email = "email"
-    "Access to the user's email."
-    market = "market"
-    "Access to goods."
-    phone_number = "phone_number"
-    "Access to phone number."
-
-
-class VkError(Exception):
-    pass
-
-
-class AuthError(VkError):
-    pass
-
-
-class CaptchaError(AuthError):
-    pass
-
-
-class Need2FAError(AuthError):
-    pass
-
-
-class InvalidClient(AuthError):
-    pass
-
-
-# {
-#     "error": "need_captcha",
-#     "captcha_sid": "286692404012",
-#     "is_refresh_enabled": True,
-#     "captcha_img": "https://vk.com/captcha.php?sid=286692404012&source=api-oauth&app_id=2685278&device_id=&resized=1",
-#     "captcha_ts": 1757165871.039,
-#     "captcha_attempt": 1,
-#     "captcha_ratio": 2.6,
-#     "redirect_uri": "https://id.vk.com/not_robot_captcha?domain=vk.com&session_token=eyJhbGciOiJBMjU2R0NNS1ciLCJlbmMiOiJBMjU2R0NNIiwiaXYiOiItbndGNXlCbHdEbzhvNlN0Iiwia2lkIjoiYzQ3YTZkNTMtYWJkZC00MzRjLWE0NWQtNjI4OGQ4MGU4YTZlIiwidGFnIjoiV0xmZFl5bVlTcHNkOE00eDJPV096USIsInppcCI6IkRFRiJ9.hhKQvezBRff0GzN8E95Hi0En8zaSoLwNJmAPtdxgmMA.49sPMmqDAkIu3_y_.zBYOmtDrLC4roYZVylEn_UvnnRqZCx9kevDDu5zgbebmqUOLmJXTSTIzQHpMLeoY-3zOmZIhLeyZOiUawxJA6VVew7PodM84OQcaEHI0cI3h7wRf4bPyO8Y7PIhfV-j6TtsFrRjfH1HFhxI9mOE74pX93Hnmkes1Z5KPWiKv_0V-tIEZLjpJ_4wQ_C0skQQijoWRZudOFpP-uNgMLDWU0C87imvyPBOAVgOhFAsuSuoGaw6dx2RUeRddpGJ42-ZnJkcTEt9ujhwZPWmGDSjCjnrIRszCN0pfqsLauC1BMIcSEaGy4WPRoewa7k-9F-AoEyHLPVqByDErjuKjJ3_Mclo_cHDG76ZrkpOMlPz7c0lQYCk5u_4wD94fzbWNgPVL26ikTm9osVQ518cXaOS2OjAeXstpFfjR2XoH1fJsmO9moIfGN1QsZJ0qzffOr9WW2nntVQtGaWNAU-oSPtpF0MswYe1eIxfUr-6y0a0jpSj6KMARzoDEQFLtWHjHa5upQfJv4RIwpXcaka3IlHqM16evo8pSJimdF7YHrzLf0tDTZKUPeBrw18QK-nxoaarbXbTe4r-hzyE-gYoeQIy6seO0kVKTBEXvKA0V32wpRV1xgVJv70sfHDE4YtLp9QuFP1RZ56Qafl8dI8yy3cGWPBs9pIYcsfp2eOTE1ps7WppIf4Sgigl4qFMEOrMO8EL16sIMbkJNHQ2HogFvesPPSv53Ozvb5aZ59vsuunSLs3_lO1KNYs3IiKJgn_zoFZisOT7CDtsT9jw1rHa6VhCr0KPf1hoZ4Xod3SDvh2kN_JF5JNyDQrQxenIBXOL9poMGNAP5ObO7EuNjXB8Y-wc8cEqy0qEPwen4bcz0EeGRdIC33a-2SeTtUXa9SYzVWXoR4Pv_tIXV4YJuyp7CKYn1wnJRCvzL-QTUyhl9v1qzZWutbMDFxrlqFhsP8OEDSfU2_hO_KLUbiv0vFjTXXfyWmfqogg.KNmVwHbWp0bdyT4VGwFm_A&variant=popup&blank=1",
-#     "is_sound_captcha_available": True,
-#     "captcha_track": "https://vk.com/sound_captcha.php?captcha_sid=286692404012&act=get&source=api-oauth_2fafcc4559798ab7&app_id=2685278&device_id=",
-#     "uiux_changes": True,
-# }
-
-
-class VkTokenProvider:
+class VkTokenProvider(BaseTokenProvider):
 
     def __init__(
         self,
@@ -98,9 +22,10 @@ class VkTokenProvider:
         scope: List[UserTokenScope] = [UserTokenScope.offline, UserTokenScope.audio],
         vk_api_client: VkAPIClient = KATE,
         session: Optional[aiohttp.ClientSession] = None,
-        captcha_solver: Optional[CaptchaSolverType] = None,
+        captcha_solver: Optional[CaptchaSolverProtocol] = None,
         two_factor_auth: Optional[Callable[[Self], Awaitable[str]]] = None,
         api_version: str = "5.131",
+        event_pipe: Optional[AuthEventPipeProtocol] = None,
     ):
         """
         Initializes the VkTokenProvider with the provided login, password, and optional parameters.
