@@ -21,7 +21,7 @@ from aiogram_vk.__meta__ import __api_version__
 from aiogram_vk.exceptions import VkAPICaptchaError, VkAPIError
 from aiogram_vk.methods import account
 from aiogram_vk.types import AccountUserSettings
-from aiogram_vk.utils import CaptchaSolverType
+from aiogram_vk.utils import CaptchaSolverProtocol
 from aiogram_vk.utils.token import extract_bot_id, validate_token
 
 from ..methods import VkMethod
@@ -39,7 +39,7 @@ class VkBot:
         session: Optional[BaseSession] = None,
         default: Optional[DefaultBotProperties] = None,
         api_version: str = __api_version__,
-        captcha_handler: Optional[CaptchaSolverType] = None,
+        captcha_handler: Optional[CaptchaSolverProtocol] = None,
     ) -> None:
         """
         VkBot class
@@ -197,7 +197,7 @@ class VkBot:
         self,
         method: VkMethod[T],
         request_timeout: Optional[int] = None,
-        captcha_handler: Optional[CaptchaSolverType] = None,
+        captcha_handler: Optional[CaptchaSolverProtocol] = None,
         max_captcha_retries: int = 2,
     ) -> T:
         """

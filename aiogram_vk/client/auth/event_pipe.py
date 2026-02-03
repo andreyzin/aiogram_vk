@@ -1,5 +1,4 @@
-from asyncio import Protocol
-from typing import Optional
+from typing import Optional, Protocol
 
 from pydantic import BaseModel
 

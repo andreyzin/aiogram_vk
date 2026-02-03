@@ -3,7 +3,7 @@ from unittest.mock import sentinel
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from aiogram_vk.client.context_controller import BotContextController
+from aiogram_vk.client.context_controllers.bot_context import BotContextController
 from aiogram_vk.client.default import Default
 
 

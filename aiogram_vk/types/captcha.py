@@ -10,7 +10,7 @@ class CaptchaInfo(BaseModel):
 
 
 class Captcha(BaseModel):
-    error: str
+    error: str = "Captcha needed"
     captcha_sid: int
     is_refresh_enabled: bool
     captcha_img: str

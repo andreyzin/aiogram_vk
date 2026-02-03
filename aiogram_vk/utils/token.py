@@ -22,10 +22,6 @@ def validate_token(token: str) -> bool:
         message = "Token is invalid! It can't contains spaces."
         raise TokenValidationError(message)
 
-    # left, sep, right = token.partition(":")
-    # if (not sep) or (not left.isdigit()) or (not right):
-    #     raise TokenValidationError("Token is invalid!")
-
     return True
 
 

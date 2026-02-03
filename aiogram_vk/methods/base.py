@@ -16,7 +16,8 @@ from typing import (
 from pydantic import BaseModel, ConfigDict
 from pydantic.functional_validators import model_validator
 
-from aiogram_vk.client.context_controller import BotContextController
+from aiogram_vk.client.context_controllers.bot_context import BotContextController
+from aiogram_vk.client.context_controllers.request_context import RequestContextController
 from aiogram_vk.types.captcha import CaptchaAnswer
 
 from ..types import InputFile, Error
@@ -46,7 +47,7 @@ class Response(BaseModel, Generic[VkType]):
         return self.error is None
 
 
-class VkMethod(BotContextController, BaseModel, Generic[VkType], ABC):
+class VkMethod(BotContextController, RequestContextController, BaseModel, Generic[VkType], ABC):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,

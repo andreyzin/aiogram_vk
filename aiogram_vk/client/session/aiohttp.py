@@ -169,7 +169,10 @@ class AiohttpSession(BaseSession):
 
         try:
             async with session.post(
-                url, data=form, timeout=self.timeout if timeout is None else timeout
+                url,
+                data=form,
+                timeout=self.timeout if timeout is None else timeout,
+                cookies=method.cookies,
             ) as resp:
                 raw_result = await resp.text()
         except asyncio.TimeoutError:

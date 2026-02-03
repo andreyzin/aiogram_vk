@@ -4,7 +4,10 @@ from .account.info import AccountInfo
 from .account.user_settings import AccountUserSettings
 from .audio.audio import Audio
 from .audio.search_result import AudioSearchResult
+from .auth.get_oauth_token_result import GetOauthTokenResult
+from .auth.validate_account_result import AuthValidateAccountResult
 from .base import UNSET_PARSE_MODE, VkObject
+from .captcha import Captcha, CaptchaAnswer
 from .custom import DateTime
 from .error import Error
 from .input_file import InputFile
@@ -16,10 +19,14 @@ __all__ = (
     "AccountUserSettings",
     "Audio",
     "AudioSearchResult",
+    "GetOauthTokenResult",
+    "AuthValidateAccountResult",
     "VkObject",
     "UNSET_PARSE_MODE",
-    "Error",
+    "Captcha",
+    "CaptchaAnswer",
     "DateTime",
+    "Error",
     "InputFile",
     "UserMin",
     "UserSettingsXtr",
