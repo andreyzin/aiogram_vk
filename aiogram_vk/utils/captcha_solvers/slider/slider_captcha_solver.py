@@ -16,20 +16,24 @@ from .make_hash import perform_pow
 from .solve_image import solve_image
 
 
-@dataclass
-class InitialParams:
+class CaptchaSettings(BaseModel):
+    type: Literal["slider", "sound"]
+    settings: str
+
+
+class InitialParams(BaseModel):
     cookies: dict
-    captcha_settings: str
+    captcha_settings: list[CaptchaSettings]
     pow_input: str
     difficulty: int
-    captcha_type: str
+    show_captcha_type: str
 
 
 class CaptchaContent(BaseModel):
-    extension: str
+    extension: Literal["jpeg", "wav"]
     image: str
     status: Literal["OK"] | Literal["ERROR"]
-    steps: list[int]
+    steps: Optional[list[int]] = None
     track: str
 
 
@@ -74,10 +78,14 @@ class SliderCaptchaSolver(CaptchaSolver):
             "remixstid": r.cookies.get("remixstid") or "",
         }
 
+        init_params = re.search(r"window\.init\s*=\s*({.*?});", r.text, re.DOTALL)
+
         captcha_settings = re.search(r"settings\":\"(.+?)\"", r.text)
         pow_input = re.search(r"powInput = \"(.+?)\"", r.text)
         difficulty = re.search(r"const difficulty = (\d+);", r.text)
         captcha_type = re.search(r"show_captcha_type\":\"(.+?)\"", r.text)
+        assert init_params
+        init_params = json.loads(init_params.group(1))
         if not captcha_settings or not pow_input or not difficulty or not captcha_type:
             raise Exception("Captcha not found")
 
@@ -86,7 +94,13 @@ class SliderCaptchaSolver(CaptchaSolver):
         difficulty = int(difficulty.group(1))
         captcha_type = captcha_type.group(1)
 
-        return InitialParams(cookies, captcha_settings, pow_input, difficulty, captcha_type)
+        return InitialParams(
+            cookies=cookies,
+            captcha_settings=init_params["data"]["captcha_settings"],
+            pow_input=pow_input,
+            difficulty=difficulty,
+            show_captcha_type=init_params["data"]["show_captcha_type"],
+        )
 
     async def _hook_captcha_settings(
         self, session: AsyncSession[Response], session_token: str, initial_params: InitialParams
@@ -101,7 +115,11 @@ class SliderCaptchaSolver(CaptchaSolver):
         )
 
     async def _get_captcha_content(
-        self, session: AsyncSession[Response], session_token: str, initial_params: InitialParams
+        self,
+        session: AsyncSession[Response],
+        session_token: str,
+        initial_params: InitialParams,
+        captcha_settings: str,
     ):
         r = await session.post(
             "https://api.vk.com/method/captchaNotRobot.getContent",
@@ -109,7 +127,7 @@ class SliderCaptchaSolver(CaptchaSolver):
                 {
                     "session_token": session_token,
                     "domain": "vk.com",
-                    "captcha_settings": initial_params.captcha_settings,
+                    "captcha_settings": captcha_settings,
                     "access_token": "",
                 }
             ),
@@ -121,6 +139,7 @@ class SliderCaptchaSolver(CaptchaSolver):
         )
         data = r.json()
         return CaptchaResponse.model_validate(data).response
+
 
     async def _hook_component_done(
         self, session: AsyncSession[Response], session_token: str, initial_params: InitialParams
@@ -153,10 +172,12 @@ class SliderCaptchaSolver(CaptchaSolver):
         await self._hook_captcha_settings(session, session_token, initial_params)
 
         steps = {}
-        if initial_params.captcha_type == "slider":
+        captchas = {i.type: i for i in initial_params.captcha_settings}
+        if (captcha_settings := captchas.get("slider")) is not None:
             captcha_content = await self._get_captcha_content(
-                session, session_token, initial_params
+                session, session_token, initial_params, captcha_settings.settings
             )
+            assert captcha_content.steps
             await self._hook_component_done(session, session_token, initial_params)
             A, steps = solve_image(captcha_content.image, captcha_content.steps)
 
