@@ -261,7 +261,7 @@ class WebTokenFlow(BaseTokenProvider):
                 # auth_user_hash=data['data']['hash']['return_auth'],
                 auth_user_hash=auth_user_hash,
                 app_id=self._vk_api_client.client_id,
-                scope=1040183263,
+                scope=calculate_user_token_scope_value(self._scope),
                 client_id=KATE.client_id,
                 access_token=access_token,
                 is_seamless_auth=1,
